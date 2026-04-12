@@ -5,6 +5,7 @@ from routers.auth import router as auth_router
 from routers.batches import router as batches_router
 from routers.coins import router as coins_router
 from routers.grading import router as grading_router
+from routers.images import router as images_router
 from routers.variety import router as variety_router
 
 app = FastAPI(
@@ -26,6 +27,7 @@ app.include_router(coins_router)
 app.include_router(batches_router)
 app.include_router(variety_router)
 app.include_router(grading_router)
+app.include_router(images_router)
 
 
 @app.get("/health")

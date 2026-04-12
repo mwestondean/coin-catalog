@@ -32,5 +32,13 @@ services:
     volumes:
       - ../images:/app/images
 
+  frontend:
+    build: ../dashboard
+    container_name: coin-frontend
+    ports:
+      - "5174:5173"
+    depends_on:
+      - api
+
 volumes:
   pgdata:
