@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: coin-postgres
+    environment:
+      POSTGRES_DB: coin_catalog
+      POSTGRES_USER: coin_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-coin_dev_2026}
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coin_admin -d coin_catalog"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./api
+    container_name: coin-api
+    ports:
+      - "8002:8000"
+    environment:
+      DATABASE_URL: postgresql://coin_admin:${POSTGRES_PASSWORD:-coin_dev_2026}@postgres:5432/coin_catalog
+      JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_change_in_prod}
+      IMAGE_DIR: /app/images
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../images:/app/images
+
+volumes:
+  pgdata:
