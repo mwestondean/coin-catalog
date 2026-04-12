@@ -15,6 +15,7 @@ Primary user: Tish (non-technical, browser-only). Secondary: Weston (admin).
 - Frontend: React + TypeScript + Vite + shadcn/ui
 - Auth: JWT
 - Infra: Vultr Ubuntu, Nginx, Cloudflare
+- Domain: https://www.turnip56.com
 - Image storage: server filesystem, Nginx-served with auth check
 
 ## Project Structure
