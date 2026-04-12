@@ -131,18 +131,23 @@ export interface CoinCreate {
   raw_grade_estimate?: string
   problem_flags?: string[]
   details_risk?: boolean
+  notes?: string
+}
+
+export interface CoinWager {
   predicted_grade_hand: string
   predicted_details_hand?: boolean
   confidence_hand: string
-  grader?: string
-  tier?: string
-  declared_value_usd?: number
-  variety_plus_requested?: boolean
-  notes?: string
+  raw_grade_estimate?: string
+  details_risk?: boolean
 }
 
 export async function createCoin(data: CoinCreate) {
   return request<Coin>("/coins/", { method: "POST", body: JSON.stringify(data) })
+}
+
+export async function setWager(coinId: string, data: CoinWager) {
+  return request<Coin>(`/coins/${coinId}/wager`, { method: "POST", body: JSON.stringify(data) })
 }
 
 export async function listCoins(params?: Record<string, string>) {

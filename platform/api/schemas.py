@@ -82,11 +82,9 @@ class CoinCreate(BaseModel):
     raw_grade_estimate: str | None = None
     problem_flags: list[str] = Field(default_factory=list)
     details_risk: bool = False
-    predicted_grade_hand: str = Field(
-        description="Required wager: predicted Sheldon grade"
-    )
-    predicted_details_hand: bool = False
-    confidence_hand: Confidence
+    predicted_grade_hand: str | None = None
+    predicted_details_hand: bool | None = None
+    confidence_hand: Confidence | None = None
     grader: Grader = Grader.Raw
     tier: str | None = None
     declared_value_usd: Decimal | None = None
@@ -119,6 +117,15 @@ class CoinUpdate(BaseModel):
     ship_date: date | None = None
     notes: str | None = None
     batch_id: int | None = None
+
+
+class CoinWager(BaseModel):
+    """Lock in the grade prediction. Immutable once set."""
+    predicted_grade_hand: str
+    predicted_details_hand: bool = False
+    confidence_hand: Confidence
+    raw_grade_estimate: str | None = None
+    details_risk: bool = False
 
 
 class CoinReconcile(BaseModel):

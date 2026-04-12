@@ -12,6 +12,7 @@ from schemas import (
     CoinReconcile,
     CoinResponse,
     CoinUpdate,
+    CoinWager,
     Denomination,
     Grader,
     SubmissionStatus,
@@ -69,8 +70,8 @@ def create_coin(
         details_risk=payload.details_risk,
         predicted_grade_hand=payload.predicted_grade_hand,
         predicted_details_hand=payload.predicted_details_hand,
-        confidence_hand=payload.confidence_hand.value,
-        prediction_date_hand=datetime.now(),
+        confidence_hand=payload.confidence_hand.value if payload.confidence_hand else None,
+        prediction_date_hand=datetime.now() if payload.predicted_grade_hand else None,
         grader=payload.grader.value,
         tier=payload.tier,
         declared_value_usd=payload.declared_value_usd,
@@ -90,6 +91,7 @@ def list_coins(
     grader: Grader | None = None,
     submission_status: SubmissionStatus | None = None,
     batch_id: int | None = None,
+    needs_wager: bool | None = None,
     limit: int = Query(default=100, le=500),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
@@ -107,6 +109,10 @@ def list_coins(
         query = query.filter(Coin.submission_status == submission_status.value)
     if batch_id is not None:
         query = query.filter(Coin.batch_id == batch_id)
+    if needs_wager is True:
+        query = query.filter(Coin.predicted_grade_hand.is_(None))
+    elif needs_wager is False:
+        query = query.filter(Coin.predicted_grade_hand.isnot(None))
 
     return query.order_by(Coin.date_added.desc()).offset(offset).limit(limit).all()
 
@@ -151,6 +157,14 @@ def update_coin(
 
     update_data = payload.model_dump(exclude_unset=True)
 
+    # Wager immutability: cannot change hand prediction via general update
+    for protected in ("predicted_grade_hand", "predicted_details_hand", "confidence_hand"):
+        if protected in update_data:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Use POST /{coin_id}/wager to set grade predictions",
+            )
+
     # Set screen prediction timestamp if screen grade is being set for the first time
     if (
         "predicted_grade_screen" in update_data
@@ -161,6 +175,38 @@ def update_coin(
 
     for field, value in update_data.items():
         setattr(coin, field, value)
+
+    db.commit()
+    db.refresh(coin)
+    return coin
+
+
+@router.post("/{coin_id}/wager", response_model=CoinResponse)
+def set_wager(
+    coin_id: str,
+    payload: CoinWager,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    coin = db.query(Coin).filter(Coin.coin_id == coin_id).first()
+    if not coin:
+        raise HTTPException(status_code=404, detail="Coin not found")
+
+    if coin.predicted_grade_hand is not None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Wager already locked for {coin_id}: {coin.predicted_grade_hand} ({coin.confidence_hand}). Wagers are immutable.",
+        )
+
+    coin.predicted_grade_hand = payload.predicted_grade_hand
+    coin.predicted_details_hand = payload.predicted_details_hand
+    coin.confidence_hand = payload.confidence_hand.value
+    coin.prediction_date_hand = datetime.now()
+
+    if payload.raw_grade_estimate:
+        coin.raw_grade_estimate = payload.raw_grade_estimate
+    if payload.details_risk:
+        coin.details_risk = payload.details_risk
 
     db.commit()
     db.refresh(coin)

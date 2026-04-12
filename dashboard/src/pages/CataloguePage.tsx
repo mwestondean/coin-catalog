@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Select,
   SelectContent,
@@ -15,9 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
 import { createCoin, uploadImages, type CoinCreate } from "@/lib/api"
-import { SHELDON_GRADES, PROBLEM_FLAGS, toShort } from "@/lib/sheldon"
+import { PROBLEM_FLAGS } from "@/lib/sheldon"
 import { Camera, CheckCircle2, Upload } from "lucide-react"
 
 const DENOMINATIONS = [
@@ -33,12 +31,6 @@ const YEARS_20C = Array.from({ length: 39 }, (_, i) => 1905 + i)
 
 const MINT_MARKS = ["Mo", "C", "S", "Puebla", "Brigada", "Ameca", "Guerrero", "Morelos", "Toluca", "Oaxaca", "Aguas-S"]
 
-const CONFIDENCE_LEVELS = [
-  { value: "low", label: "Low", description: "Not very confident" },
-  { value: "medium", label: "Medium", description: "Reasonably confident" },
-  { value: "high", label: "High", description: "Very confident" },
-]
-
 interface ImageFile {
   file: File
   preview: string
@@ -48,7 +40,7 @@ export default function CataloguePage() {
   const [saving, setSaving] = useState(false)
   const [savedCoinId, setSavedCoinId] = useState<string | null>(null)
 
-  // Form state
+  // Form state -- objective facts only (Tish's job)
   const [denomination, setDenomination] = useState("20c")
   const [year, setYear] = useState<number | "">("")
   const [mintMark, setMintMark] = useState("")
@@ -57,15 +49,7 @@ export default function CataloguePage() {
   const [source, setSource] = useState("")
   const [acquisitionDate, setAcquisitionDate] = useState("")
   const [paidUsd, setPaidUsd] = useState("")
-  const [rawGradeEstimate, setRawGradeEstimate] = useState("")
   const [problemFlags, setProblemFlags] = useState<string[]>(["none"])
-  const [detailsRisk, setDetailsRisk] = useState(false)
-  const [predictedGrade, setPredictedGrade] = useState("")
-  const [predictedDetails, setPredictedDetails] = useState(false)
-  const [confidence, setConfidence] = useState("")
-  const [grader, setGrader] = useState("Raw")
-  const [declaredValue, setDeclaredValue] = useState("")
-  const [varietyPlus, setVarietyPlus] = useState(false)
   const [notes, setNotes] = useState("")
 
   // Images
@@ -116,15 +100,7 @@ export default function CataloguePage() {
     setSource("")
     setAcquisitionDate("")
     setPaidUsd("")
-    setRawGradeEstimate("")
     setProblemFlags(["none"])
-    setDetailsRisk(false)
-    setPredictedGrade("")
-    setPredictedDetails(false)
-    setConfidence("")
-    setGrader("Raw")
-    setDeclaredValue("")
-    setVarietyPlus(false)
     setNotes("")
     setObverse(null)
     setReverse(null)
@@ -138,37 +114,21 @@ export default function CataloguePage() {
       toast.error("Year is required")
       return
     }
-    if (!predictedGrade) {
-      toast.error("Your grade prediction (the wager) is required before saving")
-      return
-    }
-    if (!confidence) {
-      toast.error("Confidence level is required")
-      return
-    }
 
     setSaving(true)
     try {
       const data: CoinCreate = {
         denomination,
         year: Number(year),
-        predicted_grade_hand: toShort(predictedGrade),
-        confidence_hand: confidence,
-        grader,
         problem_flags: problemFlags,
-        details_risk: detailsRisk,
-        predicted_details_hand: predictedDetails,
       }
 
-      if (mintMark) data.mint_mark = mintMark
+      if (mintMark && mintMark !== "none_selected") data.mint_mark = mintMark
       if (kmNumber) data.km_number = kmNumber
       if (varietyCode) data.variety_code = varietyCode
       if (source) data.source = source
       if (acquisitionDate) data.acquisition_date = acquisitionDate
       if (paidUsd) data.paid_usd = Number(paidUsd)
-      if (rawGradeEstimate) data.raw_grade_estimate = toShort(rawGradeEstimate)
-      if (declaredValue) data.declared_value_usd = Number(declaredValue)
-      if (varietyPlus) data.variety_plus_requested = true
       if (notes) data.notes = notes
 
       const coin = await createCoin(data)
@@ -179,7 +139,7 @@ export default function CataloguePage() {
         await uploadImages(coin.coin_id, obverse?.file, reverse?.file)
       }
 
-      toast.success(`Coin ${coin.coin_id} saved successfully!`)
+      toast.success(`Coin ${coin.coin_id} saved!`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save coin")
     } finally {
@@ -193,7 +153,7 @@ export default function CataloguePage() {
         <div>
           <h1 className="text-3xl font-bold">Add a Coin</h1>
           <p className="text-muted-foreground">
-            Catalogue a new coin and make your grade prediction
+            Photograph and catalogue a new coin
           </p>
         </div>
         {savedCoinId && (
@@ -327,17 +287,6 @@ export default function CataloguePage() {
                 placeholder="e.g. STR7, CRV7"
               />
             </div>
-            <div className="space-y-2">
-              <Label>Raw Grade Estimate</Label>
-              <Select value={rawGradeEstimate} onValueChange={setRawGradeEstimate}>
-                <SelectTrigger><SelectValue placeholder="Estimate" /></SelectTrigger>
-                <SelectContent>
-                  {SHELDON_GRADES.map((g) => (
-                    <SelectItem key={g} value={g}>{g}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </CardContent>
         </Card>
 
@@ -376,129 +325,26 @@ export default function CataloguePage() {
           </CardContent>
         </Card>
 
-        {/* Condition */}
+        {/* Condition -- visible stuff Tish can flag */}
         <Card>
           <CardHeader>
-            <CardTitle>Condition Notes</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label className="mb-2 block">Problem Flags</Label>
-              <div className="flex flex-wrap gap-2">
-                {PROBLEM_FLAGS.map((flag) => (
-                  <Badge
-                    key={flag}
-                    variant={problemFlags.includes(flag) ? "default" : "outline"}
-                    className="cursor-pointer select-none capitalize"
-                    onClick={() => toggleProblemFlag(flag)}
-                  >
-                    {flag}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="details-risk"
-                checked={detailsRisk}
-                onCheckedChange={(v) => setDetailsRisk(v === true)}
-              />
-              <Label htmlFor="details-risk" className="cursor-pointer">
-                Details grade risk (likely to receive a "Details" grade)
-              </Label>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Separator />
-
-        {/* The Wager */}
-        <Card className="border-primary/30 bg-primary/5">
-          <CardHeader>
-            <CardTitle>Your Prediction (The Wager) *</CardTitle>
+            <CardTitle>Visible Condition Issues</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Lock in your grade prediction before submitting. This is your wager
-              and cannot be changed after saving.
+              Tap any issues you can see. If the coin looks clean, leave it on "none."
             </p>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <div className="space-y-2">
-              <Label>Predicted Grade *</Label>
-              <Select value={predictedGrade} onValueChange={setPredictedGrade}>
-                <SelectTrigger><SelectValue placeholder="Your prediction" /></SelectTrigger>
-                <SelectContent>
-                  {SHELDON_GRADES.map((g) => (
-                    <SelectItem key={g} value={g}>{g}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Confidence *</Label>
-              <Select value={confidence} onValueChange={setConfidence}>
-                <SelectTrigger><SelectValue placeholder="How sure?" /></SelectTrigger>
-                <SelectContent>
-                  {CONFIDENCE_LEVELS.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      {c.label} - {c.description}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-end pb-2">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="predicted-details"
-                  checked={predictedDetails}
-                  onCheckedChange={(v) => setPredictedDetails(v === true)}
-                />
-                <Label htmlFor="predicted-details" className="cursor-pointer">
-                  Predict Details grade
-                </Label>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Submission Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Submission Plans</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <div className="space-y-2">
-              <Label>Grading Service</Label>
-              <Select value={grader} onValueChange={setGrader}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Raw">Raw (not submitting)</SelectItem>
-                  <SelectItem value="NGC">NGC</SelectItem>
-                  <SelectItem value="PCGS">PCGS</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Declared Value (USD)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={declaredValue}
-                onChange={(e) => setDeclaredValue(e.target.value)}
-                placeholder="0.00"
-              />
-            </div>
-            <div className="flex items-end pb-2">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="variety-plus"
-                  checked={varietyPlus}
-                  onCheckedChange={(v) => setVarietyPlus(v === true)}
-                />
-                <Label htmlFor="variety-plus" className="cursor-pointer">
-                  Request VarietyPlus (+$20)
-                </Label>
-              </div>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {PROBLEM_FLAGS.map((flag) => (
+                <Badge
+                  key={flag}
+                  variant={problemFlags.includes(flag) ? "default" : "outline"}
+                  className="cursor-pointer select-none px-3 py-1.5 text-sm capitalize"
+                  onClick={() => toggleProblemFlag(flag)}
+                >
+                  {flag}
+                </Badge>
+              ))}
             </div>
           </CardContent>
         </Card>
