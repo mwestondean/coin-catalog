@@ -6,6 +6,7 @@ import { isAuthenticated, clearToken, getMe } from "@/lib/api"
 import { useEffect, useState } from "react"
 import LoginPage from "@/pages/LoginPage"
 import CataloguePage from "@/pages/CataloguePage"
+import CoinInbox from "@/components/CoinInbox"
 import { Coins, LogOut } from "lucide-react"
 
 const queryClient = new QueryClient()
@@ -52,6 +53,7 @@ function AppNav() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <CoinInbox />
           <span className="text-sm text-muted-foreground">{username}</span>
           <Button variant="ghost" size="sm" onClick={handleLogout}>
             <LogOut className="mr-1 h-4 w-4" />

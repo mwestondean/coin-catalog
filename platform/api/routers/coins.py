@@ -132,6 +132,34 @@ def count_coins(
     return {"count": query.scalar()}
 
 
+@router.get("/pending-review", response_model=list[CoinResponse])
+def pending_review(
+    limit: int = Query(default=50, le=200),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return (
+        db.query(Coin)
+        .filter(Coin.reviewed_by_admin.is_(False))
+        .order_by(Coin.date_added.desc())
+        .limit(limit)
+        .all()
+    )
+
+
+@router.get("/pending-review/count")
+def pending_review_count(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    count = (
+        db.query(sa_func.count(Coin.coin_id))
+        .filter(Coin.reviewed_by_admin.is_(False))
+        .scalar()
+    )
+    return {"count": count}
+
+
 @router.get("/{coin_id}", response_model=CoinResponse)
 def get_coin(
     coin_id: str,
@@ -208,9 +236,40 @@ def set_wager(
     if payload.details_risk:
         coin.details_risk = payload.details_risk
 
+    coin.reviewed_by_admin = True
+
     db.commit()
     db.refresh(coin)
     return coin
+
+
+@router.post("/{coin_id}/mark-reviewed", response_model=CoinResponse)
+def mark_reviewed(
+    coin_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    coin = db.query(Coin).filter(Coin.coin_id == coin_id).first()
+    if not coin:
+        raise HTTPException(status_code=404, detail="Coin not found")
+    coin.reviewed_by_admin = True
+    db.commit()
+    db.refresh(coin)
+    return coin
+
+
+@router.post("/mark-all-reviewed")
+def mark_all_reviewed(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    count = (
+        db.query(Coin)
+        .filter(Coin.reviewed_by_admin.is_(False))
+        .update({"reviewed_by_admin": True})
+    )
+    db.commit()
+    return {"marked": count}
 
 
 @router.post("/{coin_id}/reconcile", response_model=CoinResponse)

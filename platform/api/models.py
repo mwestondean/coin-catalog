@@ -138,6 +138,7 @@ class Coin(Base):
     # Misc
     notes = Column(Text)
     registry_set_id = Column(Text)
+    reviewed_by_admin = Column(Boolean, nullable=False, default=False)
 
     # FK
     batch_id = Column(Integer, ForeignKey("batches.batch_id"))

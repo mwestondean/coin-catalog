@@ -179,6 +179,7 @@ class CoinResponse(BaseModel):
     notes: str | None
     registry_set_id: str | None
     batch_id: int | None
+    reviewed_by_admin: bool
 
     model_config = {"from_attributes": True}
 

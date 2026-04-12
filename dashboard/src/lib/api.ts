@@ -169,6 +169,23 @@ export async function uploadImages(coinId: string, obverse?: File, reverse?: Fil
   )
 }
 
+// Review / notifications
+export async function getPendingReview(limit = 10) {
+  return request<Coin[]>(`/coins/pending-review?limit=${limit}`)
+}
+
+export async function getPendingReviewCount() {
+  return request<{ count: number }>("/coins/pending-review/count")
+}
+
+export async function markReviewed(coinId: string) {
+  return request<Coin>(`/coins/${coinId}/mark-reviewed`, { method: "POST" })
+}
+
+export async function markAllReviewed() {
+  return request<{ marked: number }>("/coins/mark-all-reviewed", { method: "POST" })
+}
+
 // Variety autocomplete
 export async function autocompleteVariety(q: string, denomination?: string, year?: number) {
   const params = new URLSearchParams({ q })
