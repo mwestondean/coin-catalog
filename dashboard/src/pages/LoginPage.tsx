@@ -32,9 +32,9 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <img
-            src="/turnip56.jpg"
+            src="/turnip56-cropped.png"
             alt="Turnip56"
-            className="mx-auto mb-3 h-20 w-20 rounded-full object-cover"
+            className="mx-auto mb-3 h-24 w-auto"
           />
           <CardTitle className="text-2xl">Coin Catalog</CardTitle>
           <p className="text-sm text-muted-foreground">
