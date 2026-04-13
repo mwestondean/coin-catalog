@@ -31,6 +31,11 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
+          <img
+            src="/turnip56.jpg"
+            alt="Turnip56"
+            className="mx-auto mb-3 h-20 w-20 rounded-full object-cover"
+          />
           <CardTitle className="text-2xl">Coin Catalog</CardTitle>
           <p className="text-sm text-muted-foreground">
             Sign in to manage your collection
