@@ -7,7 +7,7 @@ import { useEffect, useState } from "react"
 import LoginPage from "@/pages/LoginPage"
 import CataloguePage from "@/pages/CataloguePage"
 import CoinInbox from "@/components/CoinInbox"
-import { Coins, LogOut } from "lucide-react"
+import { Coins, LogOut, Moon, Sun } from "lucide-react"
 
 const queryClient = new QueryClient()
 
@@ -18,9 +18,25 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function useDarkMode() {
+  const [dark, setDark] = useState(() => {
+    const saved = localStorage.getItem("coin_dark_mode")
+    if (saved !== null) return saved === "true"
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+  })
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark)
+    localStorage.setItem("coin_dark_mode", String(dark))
+  }, [dark])
+
+  return [dark, () => setDark((d) => !d)] as const
+}
+
 function AppNav() {
   const navigate = useNavigate()
   const [username, setUsername] = useState("")
+  const [dark, toggleDark] = useDarkMode()
 
   useEffect(() => {
     if (isAuthenticated()) {
@@ -54,6 +70,13 @@ function AppNav() {
         </div>
         <div className="flex items-center gap-3">
           <CoinInbox />
+          <button
+            onClick={toggleDark}
+            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            aria-label="Toggle dark mode"
+          >
+            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
           <span className="text-sm text-muted-foreground">{username}</span>
           <Button variant="ghost" size="sm" onClick={handleLogout}>
             <LogOut className="mr-1 h-4 w-4" />
