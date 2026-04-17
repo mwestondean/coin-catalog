@@ -195,3 +195,138 @@ export async function autocompleteVariety(q: string, denomination?: string, year
     `/varieties/autocomplete?${params}`,
   )
 }
+
+// Filtered coin queries
+export async function listCoinsFiltered(filters: {
+  submission_status?: string
+  batch_id?: number
+  limit?: number
+}) {
+  const params = new URLSearchParams()
+  if (filters.submission_status) params.set("submission_status", filters.submission_status)
+  if (filters.batch_id !== undefined) params.set("batch_id", String(filters.batch_id))
+  if (filters.limit) params.set("limit", String(filters.limit))
+  return request<Coin[]>(`/coins/?${params}`)
+}
+
+// Batches
+export interface Batch {
+  batch_id: number
+  name: string
+  grader: string
+  created_date: string
+  shipped_date: string | null
+  returned_date: string | null
+  invoice_number: string | null
+  coin_count: number
+}
+
+export async function listBatches() {
+  return request<Batch[]>("/batches/")
+}
+
+export async function createBatch(data: { name: string; grader: string }) {
+  return request<Batch>("/batches/", { method: "POST", body: JSON.stringify(data) })
+}
+
+export async function getBatch(batchId: number) {
+  return request<Batch>(`/batches/${batchId}`)
+}
+
+export async function addCoinsToBatch(batchId: number, coinIds: string[]) {
+  return request<Batch>(`/batches/${batchId}/add-coins`, {
+    method: "POST",
+    body: JSON.stringify(coinIds),
+  })
+}
+
+export async function removeCoinsFromBatch(batchId: number, coinIds: string[]) {
+  return request<Batch>(`/batches/${batchId}/remove-coins`, {
+    method: "POST",
+    body: JSON.stringify(coinIds),
+  })
+}
+
+export async function updateBatch(
+  batchId: number,
+  data: Partial<{ name: string; shipped_date: string; returned_date: string; invoice_number: string }>,
+) {
+  return request<Batch>(`/batches/${batchId}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteBatch(batchId: number) {
+  return request<void>(`/batches/${batchId}`, { method: "DELETE" })
+}
+
+// Grading / fees
+export interface FeeItem {
+  coin_id: string
+  tier: string
+  base_fee: string
+  add_ons: Record<string, string>
+  total: string
+}
+
+export interface FeeBreakdown {
+  grader: string
+  coin_count: number
+  handling_fee: string
+  subtotal_coins: string
+  total: string
+  items: FeeItem[]
+}
+
+export async function calculateFees(coinIds: string[], grader = "NGC") {
+  const params = new URLSearchParams({ grader_name: grader })
+  return request<FeeBreakdown>(`/grading/fees?${params}`, {
+    method: "POST",
+    body: JSON.stringify(coinIds),
+  })
+}
+
+export interface ValidationResult {
+  batch_id: number
+  grader: string
+  coin_count: number
+  valid: boolean
+  errors: string[]
+}
+
+export async function validateBatch(batchId: number) {
+  return request<ValidationResult>(`/grading/validate-batch/${batchId}`, { method: "POST" })
+}
+
+export async function downloadBatchCsv(batchId: number) {
+  const token = localStorage.getItem("coin_token")
+  const res = await fetch(`${API_BASE}/grading/export-csv/${batchId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error(`Export failed: ${res.status}`)
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `batch_${batchId}_submission.csv`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+// Reconciliation
+export interface CoinReconcile {
+  cert_number: string
+  actual_grade: string
+  actual_details?: string | null
+  return_date?: string | null
+}
+
+export async function reconcileCoin(coinId: string, data: CoinReconcile) {
+  return request<Coin>(`/coins/${coinId}/reconcile`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}

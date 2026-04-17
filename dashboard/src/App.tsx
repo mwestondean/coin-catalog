@@ -6,6 +6,8 @@ import { isAuthenticated, clearToken, getMe } from "@/lib/api"
 import { useEffect, useState } from "react"
 import LoginPage from "@/pages/LoginPage"
 import CataloguePage from "@/pages/CataloguePage"
+import BatchBuilderPage from "@/pages/BatchBuilderPage"
+import ReconciliationPage from "@/pages/ReconciliationPage"
 import CoinInbox from "@/components/CoinInbox"
 import { Coins, LogOut, Moon, Sun } from "lucide-react"
 
@@ -66,6 +68,12 @@ function AppNav() {
             <Button variant="ghost" size="sm" asChild>
               <Link to="/collection">Collection</Link>
             </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/batches">Batches</Link>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/reconcile">Reconcile</Link>
+            </Button>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -120,6 +128,22 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <CollectionPlaceholder />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/batches"
+            element={
+              <ProtectedRoute>
+                <BatchBuilderPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reconcile"
+            element={
+              <ProtectedRoute>
+                <ReconciliationPage />
               </ProtectedRoute>
             }
           />
