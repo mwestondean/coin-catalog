@@ -8,9 +8,6 @@ import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog"
 import {
   Select,
@@ -19,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import GradeCombobox from "@/components/GradeCombobox"
 import {
   getCoin,
   updateCoin,
@@ -28,8 +26,16 @@ import {
   uploadImages,
   type Coin,
 } from "@/lib/api"
-import { SHELDON_GRADES, PROBLEM_FLAGS } from "@/lib/sheldon"
-import { Check, Coins as CoinsIcon, Lock, Trash2 } from "lucide-react"
+import { PROBLEM_FLAGS } from "@/lib/sheldon"
+import {
+  Check,
+  Coins as CoinsIcon,
+  Lock,
+  Pencil,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react"
 
 interface Props {
   coinId: string
@@ -73,72 +79,83 @@ export default function CoinDetailSheet({ coinId, onClose, onUpdated }: Props) {
     }
   }
 
+  const refresh = () => {
+    load()
+    onUpdated()
+  }
+
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+      <DialogContent className="max-h-[92vh] w-[92vw] max-w-6xl overflow-y-auto p-0">
         {loading || !coin ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">Loading...</p>
+          <p className="py-16 text-center text-sm text-muted-foreground">Loading...</p>
         ) : (
-          <>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-3">
-                <span className="font-mono">{coin.coin_id}</span>
-                <Badge variant="secondary">{coin.submission_status.replace("_", " ")}</Badge>
-                {coin.predicted_grade_hand && (
-                  <Badge className="gap-1">
-                    <Lock className="h-3 w-3" />
-                    {coin.predicted_grade_hand}
-                  </Badge>
-                )}
-              </DialogTitle>
-              <DialogDescription>
+          <div>
+            {/* Header */}
+            <div className="flex flex-wrap items-center gap-3 border-b border-border px-6 py-4">
+              <span className="font-mono text-lg font-semibold">{coin.coin_id}</span>
+              <Badge variant="secondary">{coin.submission_status.replace("_", " ")}</Badge>
+              {coin.predicted_grade_hand && (
+                <Badge className="gap-1">
+                  <Lock className="h-3 w-3" />
+                  wager {coin.predicted_grade_hand}
+                </Badge>
+              )}
+              {coin.actual_grade && (
+                <Badge className="gap-1 bg-green-600 hover:bg-green-600">
+                  graded {coin.actual_grade}
+                </Badge>
+              )}
+              <span className="text-sm text-muted-foreground">
                 {coin.year}
                 {coin.mint_mark ? ` ${coin.mint_mark}` : ""}
+                {coin.km_number ? ` · KM ${coin.km_number}` : ""}
                 {coin.variety_code ? ` · ${coin.variety_code}` : ""}
-              </DialogDescription>
-            </DialogHeader>
+              </span>
+            </div>
 
-            {/* Images */}
-            <ImagesSection coin={coin} onUpdated={load} />
+            {/* Body: 2-column on md+ */}
+            <div className="grid gap-6 p-6 md:grid-cols-[320px,1fr]">
+              {/* LEFT: images */}
+              <div className="space-y-4">
+                <ImagesSection coin={coin} onUpdated={refresh} />
+              </div>
 
-            {/* Wager section */}
-            <WagerSection coin={coin} onUpdated={() => {
-              load()
-              onUpdated()
-            }} />
+              {/* RIGHT: everything else */}
+              <div className="space-y-4">
+                <WagerSection coin={coin} onUpdated={refresh} />
 
-            {/* Objective fields */}
-            <ObjectiveFieldsSection
-              coin={coin}
-              editMode={editMode}
-              onToggleEdit={() => setEditMode((v) => !v)}
-              onSaved={() => {
-                setEditMode(false)
-                load()
-                onUpdated()
-              }}
-            />
+                <DetailsSection
+                  coin={coin}
+                  editMode={editMode}
+                  onToggleEdit={() => setEditMode((v) => !v)}
+                  onSaved={() => {
+                    setEditMode(false)
+                    refresh()
+                  }}
+                />
 
-            {/* Submission / reconcile */}
-            <SubmissionSection coin={coin} onUpdated={() => {
-              load()
-              onUpdated()
-            }} />
+                <SubmissionSection coin={coin} onUpdated={refresh} />
+              </div>
+            </div>
 
-            {/* Danger zone */}
-            <div className="flex justify-end border-t border-border pt-4">
+            <div className="flex items-center justify-between border-t border-border px-6 py-3">
               <Button variant="ghost" size="sm" onClick={handleDelete}>
                 <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                Delete
+                Delete coin
+              </Button>
+              <Button variant="outline" size="sm" onClick={onClose}>
+                Close
               </Button>
             </div>
-          </>
+          </div>
         )}
       </DialogContent>
     </Dialog>
   )
 }
 
+// -------------- Images --------------
 function ImagesSection({ coin, onUpdated }: { coin: Coin; onUpdated: () => void }) {
   const [obverse, setObverseFile] = useState<File | null>(null)
   const [reverse, setReverseFile] = useState<File | null>(null)
@@ -161,49 +178,75 @@ function ImagesSection({ coin, onUpdated }: { coin: Coin; onUpdated: () => void 
   }
 
   return (
-    <section className="space-y-3">
-      <h3 className="text-sm font-semibold">Images</h3>
-      <div className="grid gap-3 md:grid-cols-2">
-        <ImageSlot
-          side="Obverse"
-          existing={coin.obverse_image_path ? `/api/images/thumbs/${coin.coin_id}_O.jpg` : null}
-          onSelect={setObverseFile}
-          selected={obverse}
-        />
-        <ImageSlot
-          side="Reverse"
-          existing={coin.reverse_image_path ? `/api/images/thumbs/${coin.coin_id}_R.jpg` : null}
-          onSelect={setReverseFile}
-          selected={reverse}
-        />
-      </div>
+    <>
+      <ImageSlot
+        side="Obverse"
+        existing={coin.obverse_image_path ? `/api/images/${coin.coin_id}_O${getExt(coin.obverse_image_path)}` : null}
+        thumb={coin.obverse_image_path ? `/api/images/thumbs/${coin.coin_id}_O.jpg` : null}
+        onSelect={setObverseFile}
+        selected={obverse}
+      />
+      <ImageSlot
+        side="Reverse"
+        existing={coin.reverse_image_path ? `/api/images/${coin.coin_id}_R${getExt(coin.reverse_image_path)}` : null}
+        thumb={coin.reverse_image_path ? `/api/images/thumbs/${coin.coin_id}_R.jpg` : null}
+        onSelect={setReverseFile}
+        selected={reverse}
+      />
       {(obverse || reverse) && (
-        <Button size="sm" onClick={handleUpload} disabled={uploading}>
-          {uploading ? "Uploading..." : "Upload new images"}
+        <Button size="sm" onClick={handleUpload} disabled={uploading} className="w-full">
+          <Upload className="mr-2 h-4 w-4" />
+          {uploading ? "Uploading..." : "Save new images"}
         </Button>
       )}
-    </section>
+    </>
   )
+}
+
+function getExt(path: string): string {
+  const m = path.match(/\.[^.]+$/)
+  return m ? m[0] : ".jpg"
 }
 
 function ImageSlot({
   side,
   existing,
+  thumb,
   onSelect,
   selected,
 }: {
   side: string
   existing: string | null
+  thumb: string | null
   onSelect: (f: File | null) => void
   selected: File | null
 }) {
-  const preview = selected ? URL.createObjectURL(selected) : existing
+  // Use full-res image for detail view, not the 200px thumbnail.
+  // Falls back to thumb if full-path encoding goes wrong.
+  const preview = selected ? URL.createObjectURL(selected) : existing || thumb
+  const [lightbox, setLightbox] = useState(false)
+
   return (
     <div>
       <Label className="text-xs">{side}</Label>
       <div className="relative aspect-square overflow-hidden rounded border border-border bg-muted">
         {preview ? (
-          <img src={preview} alt={side} className="h-full w-full object-cover" />
+          <button
+            type="button"
+            onClick={() => existing && setLightbox(true)}
+            className="block h-full w-full cursor-zoom-in"
+          >
+            <img
+              src={preview}
+              alt={side}
+              className="h-full w-full object-cover"
+              onError={(e) => {
+                const img = e.currentTarget as HTMLImageElement
+                if (thumb && img.src !== thumb) img.src = thumb
+                else img.style.display = "none"
+              }}
+            />
+          </button>
         ) : (
           <div className="flex h-full items-center justify-center">
             <CoinsIcon className="h-10 w-10 text-muted-foreground" />
@@ -214,12 +257,36 @@ function ImageSlot({
         type="file"
         accept="image/*"
         onChange={(e) => onSelect(e.target.files?.[0] || null)}
-        className="mt-2 text-xs"
+        className="mt-2 h-8 text-xs"
       />
+
+      {lightbox && existing && (
+        <div
+          role="dialog"
+          onClick={() => setLightbox(false)}
+          className="fixed inset-0 z-[100] flex cursor-zoom-out items-center justify-center bg-black/90 p-8"
+        >
+          <img
+            src={existing}
+            alt={side}
+            className="max-h-full max-w-full rounded shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            type="button"
+            onClick={() => setLightbox(false)}
+            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      )}
     </div>
   )
 }
 
+// -------------- Wager --------------
 function WagerSection({ coin, onUpdated }: { coin: Coin; onUpdated: () => void }) {
   const [grade, setGrade] = useState("")
   const [details, setDetails] = useState(false)
@@ -228,32 +295,19 @@ function WagerSection({ coin, onUpdated }: { coin: Coin; onUpdated: () => void }
 
   if (coin.predicted_grade_hand) {
     return (
-      <section className="rounded-md border border-border bg-muted/40 p-4">
-        <div className="flex items-center gap-2 text-sm font-semibold">
-          <Lock className="h-4 w-4" />
-          Wager locked
+      <Section title="Wager (locked)" icon={<Lock className="h-4 w-4" />}>
+        <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-sm">
+          <InfoBlock label="Grade" value={coin.predicted_grade_hand} mono />
+          <InfoBlock label="Details flag" value={coin.predicted_details_hand ? "Yes" : "No"} />
+          <InfoBlock label="Confidence" value={coin.confidence_hand || "—"} />
         </div>
-        <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-          <dt className="text-muted-foreground">Hand grade</dt>
-          <dd className="font-mono">{coin.predicted_grade_hand}</dd>
-          <dt className="text-muted-foreground">Details flag</dt>
-          <dd>{coin.predicted_details_hand ? "Yes" : "No"}</dd>
-          <dt className="text-muted-foreground">Confidence</dt>
-          <dd>{coin.confidence_hand || "—"}</dd>
-          <dt className="text-muted-foreground">Predicted on</dt>
-          <dd>
-            {coin.prediction_date_hand
-              ? new Date(coin.prediction_date_hand).toLocaleDateString()
-              : "—"}
-          </dd>
-        </dl>
-      </section>
+      </Section>
     )
   }
 
   async function handleSave() {
     if (!grade) {
-      toast.error("Select a grade")
+      toast.error("Pick a grade")
       return
     }
     setSaving(true)
@@ -263,7 +317,7 @@ function WagerSection({ coin, onUpdated }: { coin: Coin; onUpdated: () => void }
         predicted_details_hand: details,
         confidence_hand: confidence,
       })
-      toast.success("Wager locked in")
+      toast.success("Wager locked")
       onUpdated()
     } catch (e: any) {
       toast.error(e.message)
@@ -273,26 +327,15 @@ function WagerSection({ coin, onUpdated }: { coin: Coin; onUpdated: () => void }
   }
 
   return (
-    <section className="rounded-md border border-amber-500/40 bg-amber-50 p-4 dark:bg-amber-950/20">
-      <h3 className="text-sm font-semibold">Set Wager</h3>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Lock in your prediction. Immutable once saved.
-      </p>
-      <div className="mt-3 grid gap-3 md:grid-cols-3">
+    <Section
+      title="Set wager"
+      hint="Immutable once saved"
+      className="border-primary/50 bg-primary/5"
+    >
+      <div className="grid gap-3 md:grid-cols-[1fr,140px,auto,auto]">
         <div>
-          <Label className="text-xs">Sheldon grade</Label>
-          <Select value={grade} onValueChange={setGrade}>
-            <SelectTrigger>
-              <SelectValue placeholder="Pick a grade" />
-            </SelectTrigger>
-            <SelectContent>
-              {SHELDON_GRADES.map((g) => (
-                <SelectItem key={g} value={g}>
-                  {g}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label className="text-xs">Grade</Label>
+          <GradeCombobox value={grade} onChange={setGrade} autoFocus />
         </div>
         <div>
           <Label className="text-xs">Confidence</Label>
@@ -307,27 +350,28 @@ function WagerSection({ coin, onUpdated }: { coin: Coin; onUpdated: () => void }
             </SelectContent>
           </Select>
         </div>
+        <label className="flex cursor-pointer items-end gap-2 pb-2 text-sm">
+          <input
+            type="checkbox"
+            checked={details}
+            onChange={(e) => setDetails(e.target.checked)}
+            className="h-4 w-4 rounded border-border"
+          />
+          Details
+        </label>
         <div className="flex items-end">
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={details}
-              onChange={(e) => setDetails(e.target.checked)}
-              className="h-4 w-4 rounded border-border"
-            />
-            Expect details grade
-          </label>
+          <Button size="sm" onClick={handleSave} disabled={saving || !grade}>
+            <Lock className="mr-2 h-4 w-4" />
+            Lock
+          </Button>
         </div>
       </div>
-      <Button className="mt-3" size="sm" onClick={handleSave} disabled={saving}>
-        <Lock className="mr-2 h-4 w-4" />
-        Lock wager
-      </Button>
-    </section>
+    </Section>
   )
 }
 
-function ObjectiveFieldsSection({
+// -------------- Details --------------
+function DetailsSection({
   coin,
   editMode,
   onToggleEdit,
@@ -393,56 +437,51 @@ function ObjectiveFieldsSection({
   }
 
   return (
-    <section className="rounded-md border border-border p-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Details</h3>
+    <Section
+      title="Details"
+      actions={
         <Button size="sm" variant="ghost" onClick={onToggleEdit}>
+          {editMode ? <X className="mr-1 h-3 w-3" /> : <Pencil className="mr-1 h-3 w-3" />}
           {editMode ? "Cancel" : "Edit"}
         </Button>
-      </div>
-
+      }
+    >
       {!editMode ? (
-        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm md:grid-cols-3">
-          <Field label="Denomination" value={coin.denomination} />
-          <Field label="Year" value={coin.year} />
-          <Field label="Mint mark" value={coin.mint_mark} />
-          <Field label="KM #" value={coin.km_number} />
-          <Field label="Variety code" value={coin.variety_code} />
-          <Field label="Source" value={coin.source} />
-          <Field
-            label="Paid"
-            value={coin.paid_usd ? `$${coin.paid_usd}` : null}
-          />
-          <Field label="Acquired" value={coin.acquisition_date} />
-          <Field label="Raw estimate" value={coin.raw_grade_estimate} />
-          <Field
+        <div className="grid grid-cols-2 gap-x-6 gap-y-2 md:grid-cols-3">
+          <InfoBlock label="Denomination" value={coin.denomination} mono />
+          <InfoBlock label="Year" value={coin.year} mono />
+          <InfoBlock label="Mint mark" value={coin.mint_mark} mono />
+          <InfoBlock label="KM #" value={coin.km_number} mono />
+          <InfoBlock label="Variety" value={coin.variety_code} mono />
+          <InfoBlock label="Source" value={coin.source} />
+          <InfoBlock label="Paid" value={coin.paid_usd ? `$${coin.paid_usd}` : null} mono />
+          <InfoBlock label="Acquired" value={coin.acquisition_date} mono />
+          <InfoBlock label="Raw estimate" value={coin.raw_grade_estimate} mono />
+          <InfoBlock
             label="Problem flags"
             value={coin.problem_flags.length > 0 ? coin.problem_flags.join(", ") : "none"}
           />
-          <Field label="Details risk" value={coin.details_risk ? "Yes" : "No"} />
-          <Field
-            label="Added"
-            value={new Date(coin.date_added).toLocaleDateString()}
-          />
+          <InfoBlock label="Details risk" value={coin.details_risk ? "Yes" : "No"} />
+          <InfoBlock label="Added" value={new Date(coin.date_added).toLocaleDateString()} />
           {coin.notes && (
-            <div className="col-span-full mt-2">
-              <dt className="text-xs text-muted-foreground">Notes</dt>
-              <dd className="whitespace-pre-wrap text-sm">{coin.notes}</dd>
+            <div className="col-span-full">
+              <div className="text-xs text-muted-foreground">Notes</div>
+              <div className="whitespace-pre-wrap text-sm">{coin.notes}</div>
             </div>
           )}
-        </dl>
+        </div>
       ) : (
-        <div className="mt-3 grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-3">
           <div>
             <Label className="text-xs">Mint mark</Label>
             <Input value={mintMark} onChange={(e) => setMintMark(e.target.value)} />
           </div>
           <div>
-            <Label className="text-xs">KM number</Label>
+            <Label className="text-xs">KM #</Label>
             <Input value={kmNumber} onChange={(e) => setKmNumber(e.target.value)} />
           </div>
           <div>
-            <Label className="text-xs">Variety code</Label>
+            <Label className="text-xs">Variety</Label>
             <Input value={varietyCode} onChange={(e) => setVarietyCode(e.target.value)} />
           </div>
           <div>
@@ -460,21 +499,9 @@ function ObjectiveFieldsSection({
           </div>
           <div>
             <Label className="text-xs">Raw estimate</Label>
-            <Select value={rawEstimate} onValueChange={setRawEstimate}>
-              <SelectTrigger>
-                <SelectValue placeholder="None" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">(none)</SelectItem>
-                {SHELDON_GRADES.map((g) => (
-                  <SelectItem key={g} value={g}>
-                    {g}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <GradeCombobox value={rawEstimate} onChange={setRawEstimate} placeholder="(none)" />
           </div>
-          <div className="md:col-span-2">
+          <div className="md:col-span-3">
             <Label className="text-xs">Problem flags</Label>
             <div className="flex flex-wrap gap-2">
               {PROBLEM_FLAGS.map((f) => (
@@ -493,7 +520,7 @@ function ObjectiveFieldsSection({
               ))}
             </div>
           </div>
-          <div className="md:col-span-2">
+          <div className="md:col-span-3">
             <label className="flex cursor-pointer items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -504,31 +531,23 @@ function ObjectiveFieldsSection({
               High risk of a Details designation
             </label>
           </div>
-          <div className="md:col-span-2">
+          <div className="md:col-span-3">
             <Label className="text-xs">Notes</Label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
           </div>
-          <div className="md:col-span-2">
-            <Button onClick={handleSave} disabled={saving}>
+          <div className="md:col-span-3">
+            <Button size="sm" onClick={handleSave} disabled={saving}>
               <Check className="mr-2 h-4 w-4" />
-              Save changes
+              Save
             </Button>
           </div>
         </div>
       )}
-    </section>
+    </Section>
   )
 }
 
-function Field({ label, value }: { label: string; value: string | number | null | undefined }) {
-  return (
-    <>
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="font-mono text-sm">{value || "—"}</dd>
-    </>
-  )
-}
-
+// -------------- Submission --------------
 function SubmissionSection({ coin, onUpdated }: { coin: Coin; onUpdated: () => void }) {
   const [certNumber, setCertNumber] = useState("")
   const [actualGrade, setActualGrade] = useState("")
@@ -560,57 +579,94 @@ function SubmissionSection({ coin, onUpdated }: { coin: Coin; onUpdated: () => v
   }
 
   return (
-    <section className="rounded-md border border-border p-4">
-      <h3 className="text-sm font-semibold">Submission</h3>
-      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm md:grid-cols-3">
-        <Field label="Status" value={coin.submission_status.replace("_", " ")} />
-        <Field label="Grader" value={coin.grader} />
-        <Field label="Tier" value={coin.tier} />
-        <Field label="Batch" value={coin.batch_id !== null ? `#${coin.batch_id}` : null} />
-        <Field label="Invoice #" value={coin.submission_invoice_number} />
-        <Field label="Ship date" value={coin.ship_date} />
-        <Field label="Cert #" value={coin.cert_number} />
-        <Field label="Actual grade" value={coin.actual_grade} />
-        <Field label="Actual details" value={coin.actual_details} />
-      </dl>
+    <Section title="Submission">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-2 md:grid-cols-4">
+        <InfoBlock label="Grader" value={coin.grader} />
+        <InfoBlock label="Tier" value={coin.tier} />
+        <InfoBlock label="Batch" value={coin.batch_id !== null ? `#${coin.batch_id}` : null} />
+        <InfoBlock label="Invoice" value={coin.submission_invoice_number} mono />
+        <InfoBlock label="Ship date" value={coin.ship_date} mono />
+        <InfoBlock label="Cert #" value={coin.cert_number} mono />
+        <InfoBlock label="Actual grade" value={coin.actual_grade} mono />
+        <InfoBlock label="Actual details" value={coin.actual_details} />
+      </div>
 
       {canReconcile && (
-        <div className="mt-4 rounded border border-amber-500/40 bg-amber-50 p-3 dark:bg-amber-950/20">
-          <h4 className="text-sm font-semibold">Record graded return</h4>
-          <div className="mt-2 grid gap-2 md:grid-cols-3">
+        <div className="mt-4 rounded border border-primary/40 bg-primary/5 p-3">
+          <div className="text-sm font-semibold">Record graded return</div>
+          <div className="mt-2 grid gap-2 md:grid-cols-[1fr,1fr,1fr,auto]">
             <div>
               <Label className="text-xs">Cert number</Label>
               <Input value={certNumber} onChange={(e) => setCertNumber(e.target.value)} />
             </div>
             <div>
               <Label className="text-xs">Actual grade</Label>
-              <Select value={actualGrade} onValueChange={setActualGrade}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pick" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SHELDON_GRADES.map((g) => (
-                    <SelectItem key={g} value={g}>
-                      {g}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <GradeCombobox value={actualGrade} onChange={setActualGrade} />
             </div>
             <div>
-              <Label className="text-xs">Details designation (optional)</Label>
+              <Label className="text-xs">Details (optional)</Label>
               <Input
                 value={actualDetails}
                 onChange={(e) => setActualDetailsValue(e.target.value)}
                 placeholder="e.g. Cleaned"
               />
             </div>
+            <div className="flex items-end">
+              <Button size="sm" onClick={handleReconcile} disabled={saving}>
+                Reconcile
+              </Button>
+            </div>
           </div>
-          <Button className="mt-3" size="sm" onClick={handleReconcile} disabled={saving}>
-            Reconcile
-          </Button>
         </div>
       )}
-    </section>
+    </Section>
+  )
+}
+
+// -------------- Helpers --------------
+function Section({
+  title,
+  hint,
+  icon,
+  actions,
+  children,
+  className = "",
+}: {
+  title: string
+  hint?: string
+  icon?: React.ReactNode
+  actions?: React.ReactNode
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div className={`rounded-md border border-border p-4 ${className}`}>
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {icon}
+          <h3 className="text-sm font-semibold">{title}</h3>
+          {hint && <span className="text-xs text-muted-foreground">· {hint}</span>}
+        </div>
+        {actions}
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function InfoBlock({
+  label,
+  value,
+  mono,
+}: {
+  label: string
+  value: string | number | null | undefined
+  mono?: boolean
+}) {
+  return (
+    <div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className={`text-sm ${mono ? "font-mono" : ""}`}>{value || "—"}</div>
+    </div>
   )
 }

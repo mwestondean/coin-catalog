@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select"
 import { listCoinsFiltered, reconcileCoin, type Coin } from "@/lib/api"
 import { SHELDON_GRADES, SHELDON_SHORT } from "@/lib/sheldon"
+import GradeCombobox from "@/components/GradeCombobox"
 import { Check } from "lucide-react"
 
 /**
@@ -192,18 +193,7 @@ export default function ReconciliationPage() {
                 </div>
                 <div>
                   <Label>Actual grade</Label>
-                  <Select value={actualGrade} onValueChange={setActualGrade}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sheldon grade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SHELDON_GRADES.map((g) => (
-                        <SelectItem key={g} value={g}>
-                          {g}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <GradeCombobox value={actualGrade} onChange={setActualGrade} />
                 </div>
                 <div>
                   <Label>Details designation (optional)</Label>
