@@ -96,8 +96,8 @@ export default function CoinDetailSheet({ coinId, onClose, onUpdated }: Props) {
         ) : (
           <div>
             {/* Header */}
-            <div className="flex flex-wrap items-center gap-3 border-b border-border px-6 py-4">
-              <span className="font-mono text-lg font-semibold">{coin.coin_id}</span>
+            <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3 md:gap-3 md:px-6 md:py-4">
+              <span className="font-mono text-base font-semibold md:text-lg">{coin.coin_id}</span>
               <Badge variant="secondary">{coin.submission_status.replace("_", " ")}</Badge>
               {coin.predicted_grade_hand && (
                 <Badge className="gap-1">
@@ -110,7 +110,7 @@ export default function CoinDetailSheet({ coinId, onClose, onUpdated }: Props) {
                   graded {coin.actual_grade}
                 </Badge>
               )}
-              <span className="text-sm text-muted-foreground">
+              <span className="w-full text-xs text-muted-foreground md:w-auto md:text-sm">
                 {coin.year}
                 {coin.mint_mark ? ` ${coin.mint_mark}` : ""}
                 {coin.km_number ? ` · KM ${coin.km_number}` : ""}
@@ -119,7 +119,7 @@ export default function CoinDetailSheet({ coinId, onClose, onUpdated }: Props) {
             </div>
 
             {/* Body */}
-            <div className="space-y-4 p-6">
+            <div className="space-y-4 p-4 md:p-6">
               <ImagesSection coin={coin} onUpdated={refresh} />
 
               <WagerSection coin={coin} onUpdated={refresh} />
@@ -137,10 +137,10 @@ export default function CoinDetailSheet({ coinId, onClose, onUpdated }: Props) {
               <SubmissionSection coin={coin} onUpdated={refresh} />
             </div>
 
-            <div className="flex items-center justify-between border-t border-border px-6 py-3">
+            <div className="flex items-center justify-between border-t border-border px-4 py-3 md:px-6">
               <Button variant="ghost" size="sm" onClick={handleDelete}>
                 <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                Delete coin
+                Delete
               </Button>
               <Button variant="outline" size="sm" onClick={onClose}>
                 Close
@@ -271,44 +271,22 @@ function ImageSlot({
       >
         {preview ? (
           <>
-            <img
-              src={preview}
-              alt={side}
-              className="h-full w-full object-cover"
-              onError={(e) => {
-                const img = e.currentTarget as HTMLImageElement
-                if (thumb && img.src !== thumb) img.src = thumb
-                else img.style.display = "none"
-              }}
-            />
-
-            {/* Hover overlay: Expand + Replace */}
-            <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/0 opacity-0 transition-all hover:bg-black/55 hover:opacity-100">
-              {existing && !selected && (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setLightbox(true)
-                  }}
-                >
-                  <Expand className="mr-1 h-3 w-3" />
-                  View
-                </Button>
-              )}
-              <Button
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  openPicker()
+            <button
+              type="button"
+              onClick={() => existing && !selected && setLightbox(true)}
+              className="block h-full w-full cursor-zoom-in"
+            >
+              <img
+                src={preview}
+                alt={side}
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  const img = e.currentTarget as HTMLImageElement
+                  if (thumb && img.src !== thumb) img.src = thumb
+                  else img.style.display = "none"
                 }}
-              >
-                <Upload className="mr-1 h-3 w-3" />
-                Replace
-              </Button>
-            </div>
-
+              />
+            </button>
             {selected && (
               <div className="absolute left-2 top-2 rounded bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
                 pending
@@ -322,7 +300,7 @@ function ImageSlot({
             className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
           >
             <Upload className="h-8 w-8" />
-            <span className="text-xs">Click or drop an image</span>
+            <span className="px-2 text-center text-xs">Tap to add · drop image</span>
           </button>
         )}
 
@@ -335,11 +313,33 @@ function ImageSlot({
         />
       </div>
 
+      {/* Always-visible actions (mobile-friendly, desktop keeps click-to-zoom on the image) */}
+      {preview && (
+        <div className="mt-2 flex gap-2">
+          {existing && !selected && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="flex-1"
+              onClick={() => setLightbox(true)}
+            >
+              <Expand className="mr-1 h-3 w-3" />
+              View
+            </Button>
+          )}
+          <Button type="button" size="sm" variant="outline" className="flex-1" onClick={openPicker}>
+            <Upload className="mr-1 h-3 w-3" />
+            Replace
+          </Button>
+        </div>
+      )}
+
       {lightbox && existing && (
         <div
           role="dialog"
           onClick={() => setLightbox(false)}
-          className="fixed inset-0 z-[100] flex cursor-zoom-out items-center justify-center bg-black/90 p-8"
+          className="fixed inset-0 z-[100] flex cursor-zoom-out items-center justify-center bg-black/90 p-2 sm:p-8"
         >
           <img
             src={existing}
@@ -350,7 +350,7 @@ function ImageSlot({
           <button
             type="button"
             onClick={() => setLightbox(false)}
-            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+            className="absolute right-3 top-3 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 sm:right-4 sm:top-4"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
