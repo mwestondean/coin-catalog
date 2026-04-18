@@ -11,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Card, CardContent } from "@/components/ui/card"
 import { listCoinsFiltered, type Coin } from "@/lib/api"
 import CoinDetailSheet from "@/components/CoinDetailSheet"
 import { Coins as CoinsIcon, Search } from "lucide-react"
@@ -40,18 +39,18 @@ const STATUSES = [
 function statusTone(status: string): string {
   switch (status) {
     case "staged":
-      return "bg-muted text-muted-foreground"
+      return "bg-pink-100 text-pink-900 dark:bg-pink-950/50 dark:text-pink-200"
     case "on_form":
-      return "bg-blue-100 text-blue-900 dark:bg-blue-950/40 dark:text-blue-200"
+      return "bg-sky-100 text-sky-900 dark:bg-sky-950/50 dark:text-sky-200"
     case "shipped":
-      return "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+      return "bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200"
     case "at_grader":
-      return "bg-purple-100 text-purple-900 dark:bg-purple-950/40 dark:text-purple-200"
+      return "bg-violet-100 text-violet-900 dark:bg-violet-950/50 dark:text-violet-200"
     case "returned":
     case "graded":
-      return "bg-green-100 text-green-900 dark:bg-green-950/40 dark:text-green-200"
+      return "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-200"
     case "held_back":
-      return "bg-rose-100 text-rose-900 dark:bg-rose-950/40 dark:text-rose-200"
+      return "bg-rose-100 text-rose-900 dark:bg-rose-950/50 dark:text-rose-200"
     default:
       return "bg-muted text-muted-foreground"
   }
@@ -131,67 +130,50 @@ export default function CollectionPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <Card className="mb-6">
-        <CardContent className="pt-6">
-          <div className="grid gap-4 md:grid-cols-[1fr,200px,200px,auto]">
-            <div>
-              <Label htmlFor="search" className="text-xs">
-                Search
-              </Label>
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="search"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="coin_id, year, mint, variety, notes..."
-                  className="pl-8"
-                />
-              </div>
-            </div>
-            <div>
-              <Label className="text-xs">Denomination</Label>
-              <Select value={denomination} onValueChange={setDenomination}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DENOMINATIONS.map((d) => (
-                    <SelectItem key={d.value} value={d.value}>
-                      {d.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs">Status</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUSES.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-end">
-              <Button
-                variant={needsWagerOnly ? "default" : "outline"}
-                onClick={() => setNeedsWagerOnly((v) => !v)}
-                className="w-full"
-              >
-                Needs wager
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Filters: single compact row */}
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        <div className="relative min-w-[200px] flex-1">
+          <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search coin_id, year, mint, variety, notes..."
+            className="h-9 pl-8"
+          />
+        </div>
+        <Select value={denomination} onValueChange={setDenomination}>
+          <SelectTrigger className="h-9 w-[180px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {DENOMINATIONS.map((d) => (
+              <SelectItem key={d.value} value={d.value}>
+                {d.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger className="h-9 w-[150px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUSES.map((s) => (
+              <SelectItem key={s.value} value={s.value}>
+                {s.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          variant={needsWagerOnly ? "default" : "outline"}
+          size="sm"
+          onClick={() => setNeedsWagerOnly((v) => !v)}
+          className="h-9"
+        >
+          Needs wager
+        </Button>
+      </div>
 
       {/* Results */}
       {loading ? (
