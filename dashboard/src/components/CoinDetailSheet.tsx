@@ -27,6 +27,7 @@ import {
   type Coin,
 } from "@/lib/api"
 import { PROBLEM_FLAGS } from "@/lib/sheldon"
+import { formatDate, formatDateTime } from "@/lib/date"
 import { useRef } from "react"
 import {
   Check,
@@ -527,14 +528,15 @@ function DetailsSection({
           <InfoBlock label="Variety" value={coin.variety_code} mono />
           <InfoBlock label="Source" value={coin.source} />
           <InfoBlock label="Paid" value={coin.paid_usd ? `$${coin.paid_usd}` : null} mono />
-          <InfoBlock label="Acquired" value={coin.acquisition_date} mono />
+          <InfoBlock label="Acquired" value={formatDate(coin.acquisition_date)} mono />
           <InfoBlock label="Raw estimate" value={coin.raw_grade_estimate} mono />
           <InfoBlock
             label="Problem flags"
             value={coin.problem_flags.length > 0 ? coin.problem_flags.join(", ") : "none"}
           />
           <InfoBlock label="Details risk" value={coin.details_risk ? "Yes" : "No"} />
-          <InfoBlock label="Added" value={new Date(coin.date_added).toLocaleDateString()} />
+          <InfoBlock label="Added" value={formatDateTime(coin.date_added)} />
+          <InfoBlock label="Photo taken" value={formatDateTime(coin.image_capture_date)} />
           {coin.notes && (
             <div className="col-span-full">
               <div className="text-xs text-muted-foreground">Notes</div>
@@ -657,7 +659,7 @@ function SubmissionSection({ coin, onUpdated }: { coin: Coin; onUpdated: () => v
         <InfoBlock label="Tier" value={coin.tier} />
         <InfoBlock label="Batch" value={coin.batch_id !== null ? `#${coin.batch_id}` : null} />
         <InfoBlock label="Invoice" value={coin.submission_invoice_number} mono />
-        <InfoBlock label="Ship date" value={coin.ship_date} mono />
+        <InfoBlock label="Ship date" value={formatDate(coin.ship_date)} mono />
         <InfoBlock label="Cert #" value={coin.cert_number} mono />
         <InfoBlock label="Actual grade" value={coin.actual_grade} mono />
         <InfoBlock label="Actual details" value={coin.actual_details} />

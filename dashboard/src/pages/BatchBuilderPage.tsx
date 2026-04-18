@@ -30,6 +30,7 @@ import {
   type FeeBreakdown,
 } from "@/lib/api"
 import { Download, FileCheck2, Package, PackageCheck, Plus, Send, Trash2, X } from "lucide-react"
+import { formatDate } from "@/lib/date"
 
 function formatCoin(c: Coin): string {
   const parts = [c.coin_id, `${c.year}${c.mint_mark ? " " + c.mint_mark : ""}`]
@@ -538,11 +539,11 @@ function ShipmentCard({ batch, onChanged }: { batch: Batch; onChanged: () => voi
             <dt className="text-muted-foreground">Invoice</dt>
             <dd className="font-mono">{batch.invoice_number}</dd>
             <dt className="text-muted-foreground">Shipped</dt>
-            <dd>{batch.shipped_date}</dd>
+            <dd className="font-mono">{formatDate(batch.shipped_date)}</dd>
             {batch.returned_date && (
               <>
                 <dt className="text-muted-foreground">Returned</dt>
-                <dd>{batch.returned_date}</dd>
+                <dd className="font-mono">{formatDate(batch.returned_date)}</dd>
               </>
             )}
           </dl>

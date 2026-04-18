@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
@@ -18,6 +19,11 @@ THUMB_SIZE = (200, 200)
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".tiff"}
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
 
+# EXIF tag numbers
+EXIF_DATETIME_ORIGINAL = 36867  # 0x9003, when shutter fired
+EXIF_DATETIME_DIGITIZED = 36868  # 0x9004, when digitized
+EXIF_DATETIME = 306  # 0x0132, file modification
+
 
 def _ensure_dirs():
     IMAGE_DIR.mkdir(parents=True, exist_ok=True)
@@ -31,6 +37,29 @@ def _generate_thumbnail(source_path: Path, thumb_path: Path):
             img = img.convert("RGB")
         thumb_path.parent.mkdir(parents=True, exist_ok=True)
         img.save(thumb_path, "JPEG", quality=85)
+
+
+def _read_exif_datetime(source_path: Path) -> datetime | None:
+    """Pull the best-available capture timestamp from EXIF. Returns None if
+    the image has no EXIF or no parseable datetime tag. EXIF datetimes are
+    naive (no tz); treated as local-to-camera wall time."""
+    try:
+        with Image.open(source_path) as img:
+            exif = img.getexif()
+            if not exif:
+                return None
+            # Prefer DateTimeOriginal, fall back through the chain
+            for tag in (EXIF_DATETIME_ORIGINAL, EXIF_DATETIME_DIGITIZED, EXIF_DATETIME):
+                raw = exif.get(tag)
+                if raw:
+                    # EXIF spec: "YYYY:MM:DD HH:MM:SS"
+                    try:
+                        return datetime.strptime(raw.strip(), "%Y:%m:%d %H:%M:%S")
+                    except (ValueError, AttributeError):
+                        continue
+    except Exception:
+        pass
+    return None
 
 
 @router.post("/{coin_id}")
@@ -50,6 +79,7 @@ async def upload_images(
 
     _ensure_dirs()
     results = {}
+    exif_capture: datetime | None = None
 
     for side, file in [("O", obverse), ("R", reverse)]:
         if not file:
@@ -70,6 +100,10 @@ async def upload_images(
         filepath = IMAGE_DIR / filename
         filepath.write_bytes(content)
 
+        # Prefer obverse EXIF; fall back to reverse if obverse had none
+        if exif_capture is None:
+            exif_capture = _read_exif_datetime(filepath)
+
         # Generate thumbnail
         thumb_path = THUMB_DIR / f"{coin_id}_{side}.jpg"
         _generate_thumbnail(filepath, thumb_path)
@@ -81,12 +115,15 @@ async def upload_images(
 
         results[side] = filename
 
-    from datetime import datetime
-
-    coin.image_capture_date = datetime.now()
+    coin.image_capture_date = exif_capture or datetime.now()
     db.commit()
 
-    return {"coin_id": coin_id, "uploaded": results}
+    return {
+        "coin_id": coin_id,
+        "uploaded": results,
+        "image_capture_date": coin.image_capture_date.isoformat(),
+        "exif_found": exif_capture is not None,
+    }
 
 
 @router.get("/thumbs/{filename}")
