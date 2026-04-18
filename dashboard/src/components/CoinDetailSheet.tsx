@@ -86,7 +86,7 @@ export default function CoinDetailSheet({ coinId, onClose, onUpdated }: Props) {
 
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-h-[92vh] w-[92vw] max-w-6xl overflow-y-auto p-0">
+      <DialogContent className="max-h-[92vh] w-[92vw] max-w-6xl sm:max-w-6xl overflow-y-auto p-0">
         {loading || !coin ? (
           <p className="py-16 text-center text-sm text-muted-foreground">Loading...</p>
         ) : (
