@@ -27,11 +27,14 @@ import {
   type Coin,
 } from "@/lib/api"
 import { PROBLEM_FLAGS } from "@/lib/sheldon"
+import { useRef } from "react"
 import {
   Check,
   Coins as CoinsIcon,
+  Expand,
   Lock,
   Pencil,
+  RotateCcw,
   Trash2,
   Upload,
   X,
@@ -217,21 +220,56 @@ function ImageSlot({
   onSelect: (f: File | null) => void
   selected: File | null
 }) {
-  // Use full-res image for detail view, not the 200px thumbnail.
-  // Falls back to thumb if full-path encoding goes wrong.
+  // Show pending upload if present; otherwise full-res; otherwise thumb.
   const preview = selected ? URL.createObjectURL(selected) : existing || thumb
   const [lightbox, setLightbox] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function openPicker() {
+    fileInputRef.current?.click()
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setDragOver(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file && file.type.startsWith("image/")) onSelect(file)
+  }
 
   return (
     <div>
-      <Label className="text-xs">{side}</Label>
-      <div className="relative aspect-square overflow-hidden rounded border border-border bg-muted">
-        {preview ? (
+      <div className="mb-1 flex items-center justify-between text-xs">
+        <Label className="text-xs">{side}</Label>
+        {selected && (
           <button
             type="button"
-            onClick={() => existing && setLightbox(true)}
-            className="block h-full w-full cursor-zoom-in"
+            onClick={() => onSelect(null)}
+            className="flex items-center gap-1 text-destructive hover:underline"
           >
+            <RotateCcw className="h-3 w-3" />
+            discard
+          </button>
+        )}
+      </div>
+
+      <div
+        onDragOver={(e) => {
+          e.preventDefault()
+          setDragOver(true)
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        className={`relative aspect-square overflow-hidden rounded-md border-2 bg-muted transition-colors ${
+          dragOver
+            ? "border-primary border-solid"
+            : preview
+              ? "border-border border-solid"
+              : "border-dashed border-border hover:border-primary"
+        }`}
+      >
+        {preview ? (
+          <>
             <img
               src={preview}
               alt={side}
@@ -242,19 +280,59 @@ function ImageSlot({
                 else img.style.display = "none"
               }}
             />
-          </button>
+
+            {/* Hover overlay: Expand + Replace */}
+            <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/0 opacity-0 transition-all hover:bg-black/55 hover:opacity-100">
+              {existing && !selected && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setLightbox(true)
+                  }}
+                >
+                  <Expand className="mr-1 h-3 w-3" />
+                  View
+                </Button>
+              )}
+              <Button
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openPicker()
+                }}
+              >
+                <Upload className="mr-1 h-3 w-3" />
+                Replace
+              </Button>
+            </div>
+
+            {selected && (
+              <div className="absolute left-2 top-2 rounded bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
+                pending
+              </div>
+            )}
+          </>
         ) : (
-          <div className="flex h-full items-center justify-center">
-            <CoinsIcon className="h-10 w-10 text-muted-foreground" />
-          </div>
+          <button
+            type="button"
+            onClick={openPicker}
+            className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
+          >
+            <Upload className="h-8 w-8" />
+            <span className="text-xs">Click or drop an image</span>
+          </button>
         )}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => onSelect(e.target.files?.[0] || null)}
+        />
       </div>
-      <Input
-        type="file"
-        accept="image/*"
-        onChange={(e) => onSelect(e.target.files?.[0] || null)}
-        className="mt-2 h-8 text-xs"
-      />
 
       {lightbox && existing && (
         <div
@@ -328,12 +406,12 @@ function WagerSection({ coin, onUpdated }: { coin: Coin; onUpdated: () => void }
       hint="Immutable once saved"
       className="border-primary/50 bg-primary/5"
     >
-      <div className="grid gap-3 md:grid-cols-[1fr,140px,auto,auto]">
-        <div>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="w-40">
           <Label className="text-xs">Grade</Label>
           <GradeCombobox value={grade} onChange={setGrade} autoFocus />
         </div>
-        <div>
+        <div className="w-32">
           <Label className="text-xs">Confidence</Label>
           <Select value={confidence} onValueChange={setConfidence}>
             <SelectTrigger>
@@ -346,7 +424,7 @@ function WagerSection({ coin, onUpdated }: { coin: Coin; onUpdated: () => void }
             </SelectContent>
           </Select>
         </div>
-        <label className="flex cursor-pointer items-end gap-2 pb-2 text-sm">
+        <label className="flex cursor-pointer items-center gap-2 pb-2 text-sm">
           <input
             type="checkbox"
             checked={details}
@@ -355,12 +433,10 @@ function WagerSection({ coin, onUpdated }: { coin: Coin; onUpdated: () => void }
           />
           Details
         </label>
-        <div className="flex items-end">
-          <Button size="sm" onClick={handleSave} disabled={saving || !grade}>
-            <Lock className="mr-2 h-4 w-4" />
-            Lock
-          </Button>
-        </div>
+        <Button size="sm" onClick={handleSave} disabled={saving || !grade}>
+          <Lock className="mr-2 h-4 w-4" />
+          Lock
+        </Button>
       </div>
     </Section>
   )
@@ -590,16 +666,16 @@ function SubmissionSection({ coin, onUpdated }: { coin: Coin; onUpdated: () => v
       {canReconcile && (
         <div className="mt-4 rounded border border-primary/40 bg-primary/5 p-3">
           <div className="text-sm font-semibold">Record graded return</div>
-          <div className="mt-2 grid gap-2 md:grid-cols-[1fr,1fr,1fr,auto]">
-            <div>
+          <div className="mt-2 flex flex-wrap items-end gap-3">
+            <div className="w-48">
               <Label className="text-xs">Cert number</Label>
               <Input value={certNumber} onChange={(e) => setCertNumber(e.target.value)} />
             </div>
-            <div>
+            <div className="w-40">
               <Label className="text-xs">Actual grade</Label>
               <GradeCombobox value={actualGrade} onChange={setActualGrade} />
             </div>
-            <div>
+            <div className="w-48">
               <Label className="text-xs">Details (optional)</Label>
               <Input
                 value={actualDetails}
@@ -607,11 +683,9 @@ function SubmissionSection({ coin, onUpdated }: { coin: Coin; onUpdated: () => v
                 placeholder="e.g. Cleaned"
               />
             </div>
-            <div className="flex items-end">
-              <Button size="sm" onClick={handleReconcile} disabled={saving}>
-                Reconcile
-              </Button>
-            </div>
+            <Button size="sm" onClick={handleReconcile} disabled={saving}>
+              Reconcile
+            </Button>
           </div>
         </div>
       )}
