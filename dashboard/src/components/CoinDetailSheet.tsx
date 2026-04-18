@@ -114,29 +114,23 @@ export default function CoinDetailSheet({ coinId, onClose, onUpdated }: Props) {
               </span>
             </div>
 
-            {/* Body: 2-column on md+ */}
-            <div className="grid gap-6 p-6 md:grid-cols-[320px,1fr]">
-              {/* LEFT: images */}
-              <div className="space-y-4">
-                <ImagesSection coin={coin} onUpdated={refresh} />
-              </div>
+            {/* Body */}
+            <div className="space-y-4 p-6">
+              <ImagesSection coin={coin} onUpdated={refresh} />
 
-              {/* RIGHT: everything else */}
-              <div className="space-y-4">
-                <WagerSection coin={coin} onUpdated={refresh} />
+              <WagerSection coin={coin} onUpdated={refresh} />
 
-                <DetailsSection
-                  coin={coin}
-                  editMode={editMode}
-                  onToggleEdit={() => setEditMode((v) => !v)}
-                  onSaved={() => {
-                    setEditMode(false)
-                    refresh()
-                  }}
-                />
+              <DetailsSection
+                coin={coin}
+                editMode={editMode}
+                onToggleEdit={() => setEditMode((v) => !v)}
+                onSaved={() => {
+                  setEditMode(false)
+                  refresh()
+                }}
+              />
 
-                <SubmissionSection coin={coin} onUpdated={refresh} />
-              </div>
+              <SubmissionSection coin={coin} onUpdated={refresh} />
             </div>
 
             <div className="flex items-center justify-between border-t border-border px-6 py-3">
@@ -178,28 +172,30 @@ function ImagesSection({ coin, onUpdated }: { coin: Coin; onUpdated: () => void 
   }
 
   return (
-    <>
-      <ImageSlot
-        side="Obverse"
-        existing={coin.obverse_image_path ? `/api/images/${coin.coin_id}_O${getExt(coin.obverse_image_path)}` : null}
-        thumb={coin.obverse_image_path ? `/api/images/thumbs/${coin.coin_id}_O.jpg` : null}
-        onSelect={setObverseFile}
-        selected={obverse}
-      />
-      <ImageSlot
-        side="Reverse"
-        existing={coin.reverse_image_path ? `/api/images/${coin.coin_id}_R${getExt(coin.reverse_image_path)}` : null}
-        thumb={coin.reverse_image_path ? `/api/images/thumbs/${coin.coin_id}_R.jpg` : null}
-        onSelect={setReverseFile}
-        selected={reverse}
-      />
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-4 md:max-w-2xl">
+        <ImageSlot
+          side="Obverse"
+          existing={coin.obverse_image_path ? `/api/images/${coin.coin_id}_O${getExt(coin.obverse_image_path)}` : null}
+          thumb={coin.obverse_image_path ? `/api/images/thumbs/${coin.coin_id}_O.jpg` : null}
+          onSelect={setObverseFile}
+          selected={obverse}
+        />
+        <ImageSlot
+          side="Reverse"
+          existing={coin.reverse_image_path ? `/api/images/${coin.coin_id}_R${getExt(coin.reverse_image_path)}` : null}
+          thumb={coin.reverse_image_path ? `/api/images/thumbs/${coin.coin_id}_R.jpg` : null}
+          onSelect={setReverseFile}
+          selected={reverse}
+        />
+      </div>
       {(obverse || reverse) && (
-        <Button size="sm" onClick={handleUpload} disabled={uploading} className="w-full">
+        <Button size="sm" onClick={handleUpload} disabled={uploading}>
           <Upload className="mr-2 h-4 w-4" />
           {uploading ? "Uploading..." : "Save new images"}
         </Button>
       )}
-    </>
+    </div>
   )
 }
 
