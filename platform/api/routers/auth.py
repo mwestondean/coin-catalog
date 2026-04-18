@@ -14,14 +14,16 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/register", response_model=UserResponse, status_code=201)
 def register(payload: UserCreate, db: Session = Depends(get_db)):
-    if db.query(User).filter(User.username == payload.username).first():
+    username = payload.username.strip().lower()
+    email = payload.email.strip().lower()
+    if db.query(User).filter(User.username == username).first():
         raise HTTPException(status_code=409, detail="Username already taken")
-    if db.query(User).filter(User.email == payload.email).first():
+    if db.query(User).filter(User.email == email).first():
         raise HTTPException(status_code=409, detail="Email already registered")
 
     user = User(
-        username=payload.username,
-        email=payload.email,
+        username=username,
+        email=email,
         password_hash=hash_password(payload.password),
         role=payload.role,
     )
@@ -36,7 +38,8 @@ def login(
     form: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
-    user = db.query(User).filter(User.username == form.username).first()
+    username = form.username.strip().lower()
+    user = db.query(User).filter(User.username == username).first()
     if not user or not verify_password(form.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
