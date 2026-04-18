@@ -89,23 +89,19 @@ async def upload_images(
     return {"coin_id": coin_id, "uploaded": results}
 
 
-@router.get("/{filename}")
-def serve_image(
-    filename: str,
-    user: User = Depends(get_current_user),
-):
-    filepath = IMAGE_DIR / filename
-    if not filepath.exists():
-        raise HTTPException(status_code=404, detail="Image not found")
-    return FileResponse(filepath)
-
-
 @router.get("/thumbs/{filename}")
-def serve_thumbnail(
-    filename: str,
-    user: User = Depends(get_current_user),
-):
+def serve_thumbnail(filename: str):
     thumb_path = THUMB_DIR / filename
     if not thumb_path.exists():
         raise HTTPException(status_code=404, detail="Thumbnail not found")
     return FileResponse(thumb_path)
+
+
+@router.get("/{filename}")
+def serve_image(filename: str):
+    # Public read: filename contains the coin_id which requires login to discover,
+    # and <img src> tags can't send the bearer token.
+    filepath = IMAGE_DIR / filename
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="Image not found")
+    return FileResponse(filepath)

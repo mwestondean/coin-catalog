@@ -146,6 +146,17 @@ export async function createCoin(data: CoinCreate) {
   return request<Coin>("/coins/", { method: "POST", body: JSON.stringify(data) })
 }
 
+export async function updateCoin(coinId: string, data: Partial<CoinCreate> & Record<string, any>) {
+  return request<Coin>(`/coins/${coinId}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteCoin(coinId: string) {
+  return request<void>(`/coins/${coinId}`, { method: "DELETE" })
+}
+
 export async function setWager(coinId: string, data: CoinWager) {
   return request<Coin>(`/coins/${coinId}/wager`, { method: "POST", body: JSON.stringify(data) })
 }
@@ -259,6 +270,24 @@ export async function updateBatch(
 
 export async function deleteBatch(batchId: number) {
   return request<void>(`/batches/${batchId}`, { method: "DELETE" })
+}
+
+export async function shipBatch(batchId: number, data: { invoice_number: string; ship_date?: string }) {
+  return request<Batch>(`/batches/${batchId}/ship`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function markBatchAtGrader(batchId: number) {
+  return request<Batch>(`/batches/${batchId}/mark-at-grader`, { method: "POST" })
+}
+
+export async function receiveBatch(batchId: number, data: { returned_date?: string } = {}) {
+  return request<Batch>(`/batches/${batchId}/receive`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
 }
 
 // Grading / fees

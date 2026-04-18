@@ -22,11 +22,14 @@ import {
   validateBatch,
   downloadBatchCsv,
   deleteBatch,
+  shipBatch,
+  markBatchAtGrader,
+  receiveBatch,
   type Batch,
   type Coin,
   type FeeBreakdown,
 } from "@/lib/api"
-import { Download, FileCheck2, Plus, Trash2, X } from "lucide-react"
+import { Download, FileCheck2, Package, PackageCheck, Plus, Send, Trash2, X } from "lucide-react"
 
 function formatCoin(c: Coin): string {
   const parts = [c.coin_id, `${c.year}${c.mint_mark ? " " + c.mint_mark : ""}`]
@@ -422,8 +425,170 @@ export default function BatchBuilderPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Shipment workflow */}
+          {selectedBatch && batchCoins.length > 0 && (
+            <ShipmentCard
+              batch={selectedBatch}
+              onChanged={() => {
+                refreshBatches()
+                if (selectedBatchId) refreshBatchCoins(selectedBatchId)
+              }}
+            />
+          )}
         </div>
       </div>
     </div>
+  )
+}
+
+function ShipmentCard({ batch, onChanged }: { batch: Batch; onChanged: () => void }) {
+  const [invoice, setInvoice] = useState(batch.invoice_number || "")
+  const [shipDate, setShipDate] = useState(
+    batch.shipped_date || new Date().toISOString().slice(0, 10),
+  )
+  const [returnedDate, setReturnedDate] = useState(
+    batch.returned_date || new Date().toISOString().slice(0, 10),
+  )
+  const [busy, setBusy] = useState(false)
+
+  const isShipped = !!batch.shipped_date
+  const isReturned = !!batch.returned_date
+
+  async function handleShip() {
+    if (!invoice.trim()) {
+      toast.error("Invoice number required")
+      return
+    }
+    setBusy(true)
+    try {
+      await shipBatch(batch.batch_id, { invoice_number: invoice.trim(), ship_date: shipDate })
+      toast.success("Batch marked shipped")
+      onChanged()
+    } catch (e: any) {
+      toast.error(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleAtGrader() {
+    setBusy(true)
+    try {
+      await markBatchAtGrader(batch.batch_id)
+      toast.success("Batch marked at grader")
+      onChanged()
+    } catch (e: any) {
+      toast.error(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleReceive() {
+    setBusy(true)
+    try {
+      await receiveBatch(batch.batch_id, { returned_date: returnedDate })
+      toast.success("Batch received. Reconcile coins individually.")
+      onChanged()
+    } catch (e: any) {
+      toast.error(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Shipment</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center gap-2 text-xs">
+          <Phase label="Staged" active={!isShipped} done={isShipped} />
+          <span className="text-muted-foreground">→</span>
+          <Phase label="Shipped" active={isShipped && !isReturned} done={isReturned} />
+          <span className="text-muted-foreground">→</span>
+          <Phase label="Returned" active={isReturned} done={isReturned} />
+        </div>
+
+        {!isShipped ? (
+          <div className="space-y-3">
+            <div className="grid gap-2 md:grid-cols-2">
+              <div>
+                <Label className="text-xs">Invoice number</Label>
+                <Input
+                  value={invoice}
+                  onChange={(e) => setInvoice(e.target.value)}
+                  placeholder="NGC invoice # once confirmed"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Ship date</Label>
+                <Input type="date" value={shipDate} onChange={(e) => setShipDate(e.target.value)} />
+              </div>
+            </div>
+            <Button onClick={handleShip} disabled={busy}>
+              <Send className="mr-2 h-4 w-4" />
+              Mark shipped
+            </Button>
+          </div>
+        ) : (
+          <dl className="grid grid-cols-2 gap-1 text-sm">
+            <dt className="text-muted-foreground">Invoice</dt>
+            <dd className="font-mono">{batch.invoice_number}</dd>
+            <dt className="text-muted-foreground">Shipped</dt>
+            <dd>{batch.shipped_date}</dd>
+            {batch.returned_date && (
+              <>
+                <dt className="text-muted-foreground">Returned</dt>
+                <dd>{batch.returned_date}</dd>
+              </>
+            )}
+          </dl>
+        )}
+
+        {isShipped && !isReturned && (
+          <div className="space-y-3 border-t border-border pt-3">
+            <Button variant="outline" onClick={handleAtGrader} disabled={busy}>
+              <Package className="mr-2 h-4 w-4" />
+              Mark at grader
+            </Button>
+            <div className="grid gap-2 md:grid-cols-2">
+              <div>
+                <Label className="text-xs">Returned date</Label>
+                <Input
+                  type="date"
+                  value={returnedDate}
+                  onChange={(e) => setReturnedDate(e.target.value)}
+                />
+              </div>
+              <div className="flex items-end">
+                <Button onClick={handleReceive} disabled={busy} className="w-full">
+                  <PackageCheck className="mr-2 h-4 w-4" />
+                  Mark returned
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function Phase({ label, active, done }: { label: string; active: boolean; done: boolean }) {
+  return (
+    <span
+      className={`rounded-full px-2 py-0.5 ${
+        active
+          ? "bg-primary text-primary-foreground"
+          : done
+            ? "bg-green-100 text-green-900 dark:bg-green-950/40 dark:text-green-200"
+            : "bg-muted text-muted-foreground"
+      }`}
+    >
+      {label}
+    </span>
   )
 }

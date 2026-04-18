@@ -153,6 +153,89 @@ def remove_coins_from_batch(
     return _batch_response(batch, coin_count)
 
 
+@router.post("/{batch_id}/ship", response_model=BatchResponse)
+def ship_batch(
+    batch_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Mark batch shipped: set invoice + ship_date, cascade coins to 'shipped'."""
+    from datetime import date as _date
+
+    batch = db.query(Batch).filter(Batch.batch_id == batch_id).first()
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+
+    invoice_number = payload.get("invoice_number")
+    ship_date_str = payload.get("ship_date")
+    if not invoice_number:
+        raise HTTPException(status_code=400, detail="invoice_number required")
+
+    batch.invoice_number = invoice_number
+    batch.shipped_date = _date.fromisoformat(ship_date_str) if ship_date_str else _date.today()
+
+    db.query(Coin).filter(Coin.batch_id == batch_id).update(
+        {"submission_status": "shipped", "submission_invoice_number": invoice_number,
+         "ship_date": batch.shipped_date}
+    )
+    db.commit()
+    db.refresh(batch)
+
+    coin_count = db.query(Coin).filter(Coin.batch_id == batch_id).count()
+    return _batch_response(batch, coin_count)
+
+
+@router.post("/{batch_id}/mark-at-grader", response_model=BatchResponse)
+def mark_at_grader(
+    batch_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    batch = db.query(Batch).filter(Batch.batch_id == batch_id).first()
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+
+    db.query(Coin).filter(Coin.batch_id == batch_id).update(
+        {"submission_status": "at_grader"}
+    )
+    db.commit()
+
+    coin_count = db.query(Coin).filter(Coin.batch_id == batch_id).count()
+    return _batch_response(batch, coin_count)
+
+
+@router.post("/{batch_id}/receive", response_model=BatchResponse)
+def receive_batch(
+    batch_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Mark batch returned from grader. Does NOT reconcile individual coins --
+    that happens per-coin via /coins/{id}/reconcile as cert numbers are assigned."""
+    from datetime import date as _date
+
+    batch = db.query(Batch).filter(Batch.batch_id == batch_id).first()
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+
+    returned_date_str = payload.get("returned_date")
+    batch.returned_date = (
+        _date.fromisoformat(returned_date_str) if returned_date_str else _date.today()
+    )
+
+    # Only flip coins that haven't been individually reconciled yet
+    db.query(Coin).filter(
+        Coin.batch_id == batch_id, Coin.actual_grade.is_(None)
+    ).update({"submission_status": "graded"})
+    db.commit()
+    db.refresh(batch)
+
+    coin_count = db.query(Coin).filter(Coin.batch_id == batch_id).count()
+    return _batch_response(batch, coin_count)
+
+
 @router.delete("/{batch_id}", status_code=204)
 def delete_batch(
     batch_id: int,

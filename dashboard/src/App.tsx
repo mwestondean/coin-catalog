@@ -8,8 +8,10 @@ import LoginPage from "@/pages/LoginPage"
 import CataloguePage from "@/pages/CataloguePage"
 import BatchBuilderPage from "@/pages/BatchBuilderPage"
 import ReconciliationPage from "@/pages/ReconciliationPage"
+import CollectionPage from "@/pages/CollectionPage"
+import DashboardPage from "@/pages/DashboardPage"
 import CoinInbox from "@/components/CoinInbox"
-import { Coins, LogOut, Moon, Sun } from "lucide-react"
+import { LogOut, Moon, Sun } from "lucide-react"
 
 const queryClient = new QueryClient()
 
@@ -74,6 +76,9 @@ function AppNav() {
             <Button variant="ghost" size="sm" asChild>
               <Link to="/reconcile">Reconcile</Link>
             </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/dashboard">Dashboard</Link>
+            </Button>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -96,18 +101,6 @@ function AppNav() {
   )
 }
 
-function CollectionPlaceholder() {
-  return (
-    <div className="flex min-h-[60vh] items-center justify-center">
-      <div className="text-center text-muted-foreground">
-        <Coins className="mx-auto mb-4 h-12 w-12" />
-        <h2 className="text-xl font-semibold">Collection View</h2>
-        <p>Coming soon: browse and search your catalogued coins.</p>
-      </div>
-    </div>
-  )
-}
-
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -127,7 +120,7 @@ export default function App() {
             path="/collection"
             element={
               <ProtectedRoute>
-                <CollectionPlaceholder />
+                <CollectionPage />
               </ProtectedRoute>
             }
           />
@@ -144,6 +137,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <ReconciliationPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
               </ProtectedRoute>
             }
           />
